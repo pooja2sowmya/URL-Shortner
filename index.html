@@ -4,7 +4,117 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>URL Shortener</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- Inline CSS -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400&display=swap');
+
+    :root {
+      --cyan: hsl(180, 66%, 49%);
+      --dark-violet: hsl(257, 27%, 26%);
+      --red: hsl(0, 87%, 67%);
+      --grayish-violet: hsl(257, 7%, 63%);
+      --very-dark-blue: hsl(255, 11%, 22%);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: #f0f1f6;
+    }
+
+    .main {
+      max-width: 900px;
+      margin: 4em auto;
+      padding: 0 20px;
+    }
+
+    .btn {
+      border-radius: 9px;
+      padding: 15px 25px;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .cyan-btn {
+      background: var(--cyan);
+      color: white;
+    }
+    .cyan-btn:hover {
+      opacity: 0.8;
+    }
+
+    .shorten-url-form {
+      background: var(--dark-violet);
+      border-radius: 9px;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+    }
+
+    .input-fields {
+      display: flex;
+      flex-direction: row;
+      gap: 1em;
+      flex-wrap: wrap;
+    }
+
+    .shorten-url-form input {
+      flex: 1;
+      padding: 15px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 9px;
+    }
+
+    .error-msg {
+      color: var(--red);
+      font-style: italic;
+      font-size: 0.9em;
+    }
+
+    .content {
+      margin-top: 2em;
+    }
+
+    .url-results {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1em;
+      flex-wrap: wrap;
+    }
+
+    .left-result h3 {
+      font-size: 0.95em;
+      word-break: break-all;
+      color: var(--very-dark-blue);
+    }
+
+    .right-result {
+      display: flex;
+      gap: 1em;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .right-result h3 {
+      color: var(--cyan);
+      font-size: 0.95em;
+      word-break: break-all;
+    }
+  </style>
 </head>
 <body>
   <div class="main">
@@ -27,6 +137,81 @@
       </div>
     </section>
   </div>
-  <script src="main.js" type="module"></script>
+
+  <!-- Inline JavaScript -->
+  <script type="module">
+    const urlForm = document.querySelector('.shorten-url-form');
+    const resultDisplayArea = document.querySelector('.content');
+    const urlInputArea = document.getElementById('textarea');
+
+    urlForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const currUrl = urlInputArea.value.trim();
+      if (!currUrl) return;
+
+      try {
+        const response = await fetch('https://url-shortener-service.p.rapidapi.com/shorten', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+            'X-RapidAPI-Key': 'a6b9a6582amsh9ec090d9b167ff4p12202djsn065a9c008690',
+            'X-RapidAPI-Host': 'url-shortener-service.p.rapidapi.com'
+          },
+          body: new URLSearchParams({ url: currUrl })
+        });
+
+        if (!response.ok) {
+          showError('Please enter a valid link');
+          return;
+        }
+
+        const data = await response.json();
+        const shortUrl = data?.result_url;
+        displayResult(currUrl, shortUrl);
+        urlInputArea.value = '';
+      } catch (err) {
+        showError('Network error. Try again.');
+      }
+    });
+
+    function showError(message) {
+      urlInputArea.style.border = '2px solid var(--red)';
+      document.querySelector('.error-msg').textContent = message;
+    }
+
+    function displayResult(originalUrl, shortUrl) {
+      const html = `
+        <div class="url-results">
+          <div class="left-result"><h3>${originalUrl.slice(0, 50)}...</h3></div>
+          <div class="right-result">
+            <h3 class="result-url">${shortUrl}</h3>
+            <button class="btn cyan-btn copyBtn">Copy</button>
+          </div>
+        </div>
+      `;
+      resultDisplayArea.insertAdjacentHTML('afterbegin', html);
+      urlInputArea.style.border = 'none';
+      document.querySelector('.error-msg').textContent = '';
+    }
+
+    // Copy button functionality
+    document.body.addEventListener('click', (e) => {
+      if (e.target.classList.contains('copyBtn')) {
+        const button = e.target;
+        const urlText = button.parentElement.querySelector('.result-url').textContent;
+        navigator.clipboard.writeText(urlText);
+
+        button.textContent = 'Copied!';
+        button.style.background = 'hsl(255, 11%, 22%)';
+        button.disabled = true;
+
+        setTimeout(() => {
+          button.textContent = 'Copy';
+          button.style.background = 'hsl(180, 66%, 49%)';
+          button.disabled = false;
+        }, 3000);
+      }
+    });
+  </script>
 </body>
 </html>
